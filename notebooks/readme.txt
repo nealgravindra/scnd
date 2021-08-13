@@ -1,7 +1,7 @@
 Notebooks used for...
 
 fig1:
-- fig1update_newubc.ipynb: umap embeddings incorporating new ctype annotation of ubc/dcn and w/in ubc, on/off/intermediate
+- fig1update_newubc.ipynb: umap embeddings and violin plots with new ctype annotation of ubc/dcn and w/in ubc, on/off/intermediate
 - 
 
 Data files:
