@@ -4,8 +4,10 @@ import os
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
+import time
 
 import scanpy as sc
+import scvelo as scv
 
 # settings
 plt.rc('font', size = 9)
@@ -129,3 +131,132 @@ def load_interactors(file='/home/ngr4/project/scnd/results/atxn_interactors.csv'
         interactors = pd.Series(interactors).replace(missing_interactors).to_list()
     return interactors
 
+def load_human(wt='/home/ngr4/project/scnd/data/processed/hum_ctrl.h5ad', 
+               sca1='/home/ngr4/project/scnd/data/processed/hum_sca1.h5ad', 
+               merge=False, velocity='/home/ngr4/project/scnd/data/human/', 
+               custom_keep=True,
+               verbose=True, **kwargs):
+    '''
+    Arguments:
+      velocity (str or None): (optional, Default=None) enter loom filepath or leave as 
+        None, which means no velocity data will be loaded
+      custom_keep (bool): (optional, Default=True) slims down wt/sca1 data objects to
+        retain just the gene and cell metadata, the imputed and normalized+transformed data
+    '''
+    if wt is not None:
+        wt = sc.read(wt)
+        if custom_keep:
+            # retain only X, obs, var, imputed, and X_phate and X_umap slots
+            sc.AnnData(X=wt.X, var=wt.var, obs=wt.obs, layers=wt.layers)
+    if sca1 is not None:
+        sca1 = sc.read(sca1)
+        if custom_keep:
+            # retain only X, obs, var, imputed, and X_phate and X_umap slots
+            sca1 = sc.AnnData(X=sca1.X, obs=sca1.obs, var=sca1.var, layers=sca1.layers)
+    if 'sca3' in kwargs:
+        sca3 = sc.read(kwargs['sca3'])
+    if merge:
+        if not 'sca3' in kwargs:
+            adata = wt.concatenate(sca1, batch_key='batch_adata', 
+                                   batch_categories=['WT', 'SCA1'], 
+                                   index_unique=None)
+        else:
+            adata = wt.concatenate([sca1, sca3], batch_key='batch_adata', 
+                                   batch_categories=['WT', 'SCA1', 'SCA3'], 
+                                   index_unique=None)
+    if velocity is not None:
+        loom_files = glob.glob(os.path.join(velocity,'*/*.loom'))
+        if wt is None:
+            loom_files = [i for i in loom_files if any([True if j in i else False for j in sca1.obs['batch'].unique()])]
+        elif sca1 is None:
+            loom_files = [i for i in loom_files if any([True if j in i else False for j in wt.obs['batch'].unique()])]
+        sample_names = [os.path.split(os.path.split(loom_files[i])[0])[1] for i in range(len(loom_files))]
+        if verbose:
+            print('Loading looms...')
+            for (name, f) in zip(sample_names, loom_files):
+                print('  for {} @{}'.format(name, f))
+        adata_looms = {}
+        for i in range(len(loom_files)):
+            start = time.time()
+            if i == 0:
+                adata_loom = scv.read_loom(loom_files[i], sparse=True, cleanup=True)
+                adata_loom.var_names_make_unique()
+            else:
+                adata_looms[sample_names[i]] = scv.read_loom(loom_files[i], sparse=True, cleanup=True)
+                adata_looms[sample_names[i]].var_names_make_unique()
+        try:
+            adata_loom = adata_loom.concatenate(*adata_looms.values(), batch_categories=sample_names)
+        except ValueError:
+            adata_loom = adata_loom.concatenate(*adata_looms.values(), batch_categories=sample_names)
+        if verbose:
+            print('looms loaded into sc.AnnData in {:.1f}-min'.format((time.time()-start)/60))
+    if merge and velocity is not None:
+        return scv.utils.merge(adata, adata_loom)
+    elif merge and velocity is None:
+        return adata
+    if not merge:
+        if wt is None and velocity is None:
+            return sca1
+        elif wt is None and velocity is not None:
+            return scv.utils.merge(sca1, adata_loom)
+        elif sca1 is None and velocity is None:
+            return wt
+        elif sca1 is None and velocity is not None:
+            return scv.utils.merge(wt, adata_loom)
+        elif not 'sca3' in kwargs and velocity is None:
+            return wt, sca1
+        elif 'sca3' in kwargs and velocity is None:
+            return wt, sca1, sca3
+    
+    
+
+def phate_from_adataknn(X, recalculate=False, bbknn=True, umap=False) :
+    """Recalculate or use graph contained within adata for PHATE coords
+    
+    Args:
+        X (AnnData): subsetted AnnData object
+        recalculate (bool): (optional, Default: False) recalculate graph
+        plot (ax object): optional. give ax object to plot in multiple for loop 
+        save (str): optional. Save the plot with the full filepath indicated, otherwise return ax
+    """
+    if recalculate :
+        # umap/louvain based off batch-balanced graph
+        sc.tl.pca(X,n_comps=100)
+        if bbknn:
+            import bbknn
+            bbknn.bbknn(X)
+        else :
+            sc.pp.neighbors(X, n_neighbors=30, n_pcs=100)
+
+        # compute PHATE
+        import phate
+        import graphtools as gt
+        from scipy import sparse
+        G = gt.Graph(data=X.uns['neighbors']['connectivities']+sparse.diags([1]*X.shape[0], format='csr'),
+                     precomputed='adjacency',
+                     use_pygsp=True)
+        G.knn_max = None
+
+        phate_op = phate.PHATE(knn_dist='precomputed',
+                               gamma=0,
+                               n_jobs=-1)
+        X.obsm['X_phate']=phate_op.fit_transform(G.K)
+        if umap:
+            sc.tl.umap(X)
+    return X
+
+def get_lt_server_fpaths(in_file='/home/ngr4/scratch60/llt_sequencing.txt',
+                         out_file='/home/ngr4/project/scnd/data/processed/leon_tejwani_data_on_ruddle.csv'):
+    os.system('ls -d /ycga-gpfs/sequencers/pacbio/gw92/10x/data_sent/llt26/*/*cellranger > {}'.format(in_file))
+    df = pd.DataFrame()
+    with open(in_file, 'r') as f:
+        lines = f.readlines()
+        for line in lines:
+            fpath, fname = os.path.split(line.strip())
+            fname, _ = fname.split('_cellranger')
+            df = df.append(pd.DataFrame({'fpath':fpath,
+                                         'fname':fname}, index=[0]), 
+                           ignore_index=True)
+    if out_file is not None:
+        df.to_csv(out_file)
+    return None

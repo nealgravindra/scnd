@@ -10,4 +10,7 @@ Data files:
     /home/ngr4/project/scnd/data/processed/mouse_wt_imputed.h5ad 
       AND
     /home/ngr4/project/scnd/data/processed/mouse_sca1_imputed.h5ad
-- human data (not imputed): 
+- human data: 
+    wt:   '/home/ngr4/project/scnd/data/processed/hum_ctrl.h5ad'
+    sca1: '/home/ngr4/project/scnd/data/processed/hum_sca1.h5ad'
+    sca3: '/home/ngr4/project/scnd/data/processed/hum_sca3.h5ad'
