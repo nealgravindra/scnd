@@ -23,6 +23,6 @@ For a folder with the structure:
 .
 ```
 
-Run a job for `cellranger count` per sample.
+Run a job for `cellranger count` per sample by specifying `fastq2cellranger.sh` variables. 
 
 
