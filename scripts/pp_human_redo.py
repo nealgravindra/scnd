@@ -16,6 +16,7 @@ import pandas as pd
 import time,random,datetime
 from scipy import sparse
 import scanpy as sc
+import bbknn
 
 def chk_files(data_folders):
     files_not_found = []
@@ -42,6 +43,7 @@ def cellranger2adata(data_folders, sample_str_pattern='(.*)_HNT', adata_out=None
 
     start = time.time()
     adatas = {}
+    running_cellcount = 0
     for i,folder in enumerate(data_folders) :
         animal_id = os.path.split(re.findall(sample_str_pattern, folder)[0])[1]
         print('... storing %s into dict (%d/%d)' % (animal_id, i+1, len(data_folders)))
@@ -147,7 +149,7 @@ def batch_correction(adata, adata_out=None, batch_key='Sample', knn=100,
     start = time.time()
     print('Starting embeddings and batch effect correcftion...')
     sc.tl.pca(adata, n_comps=100)
-    sc.external.pp.bbknn(adata, 
+    bbknn.bbknn(adata, 
                          n_pcs=100, 
                          batch_key=batch_key,
                          neighbors_within_batch=knn//len(adata.obs[batch_key].unique()),
@@ -217,7 +219,7 @@ def magic_impute(adata, adata_out, batch_key='Sample', t=1):
     def graph_pp(AnnData, bbknn=True, k=30, n_pcs=100, batch_key=batch_key):
         sc.tl.pca(AnnData, n_comps=n_pcs)
         if bbknn:
-            sc.external.pp.bbknn(AnnData,
+            bbknn.bbknn(AnnData,
                                  n_pcs=n_pcs,
                                  neighbors_within_batch=k // len(adata.obs[batch_key].unique()))
         else:
@@ -258,7 +260,8 @@ if __name__ == '__main__':
         '4092_HNT', '132_HNT', 
         '15162_HNT', '1-Jan_HNT', 
         '3-Jan_HNT', '409_HNT',
-        ] 
+        ]
+    data_folders = [os.path.join(i, 'outs/filtered_feature_bc_matrix/') for i in data_folders]
     adata_out = '/home/ngr4/project/scnd/data/processed/hum_210920.h5ad'
     ####
 
@@ -286,8 +289,8 @@ if __name__ == '__main__':
     ####
 
     adata.obs['genotype'] = 'None'
-    adata.obs[[True if 'SCA1' in i else False for i in adata.obs['Sample']], 'genotype'] = 'SCA1'
-    adata.obs[[True if 'CTRL' in i else False for i in adata.obs['Sample']], 'genotype'] = 'CTRL'
+    adata.obs.loc[[True if 'SCA1' in i else False for i in adata.obs['Sample']], 'genotype'] = 'SCA1'
+    adata.obs.loc[[True if 'CTRL' in i else False for i in adata.obs['Sample']], 'genotype'] = 'CTRL'
     adata = pp(adata, adata_out=adata_out)
     
     ####
