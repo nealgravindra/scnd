@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 import time
+import datetime
 
 import scanpy as sc
 import scvelo as scv
@@ -260,3 +261,37 @@ def get_lt_server_fpaths(in_file='/home/ngr4/scratch60/llt_sequencing.txt',
     if out_file is not None:
         df.to_csv(out_file)
     return None
+
+def save_adata(adata, out_file, verbose=True):
+    if verbose:
+        print(adata)
+    adata.write(out_file)
+    if verbose:
+        print('\nadata saved @'+datetime.datetime.now().strftime('%y%m%d.%H:%M:%S'))
+    return None
+
+def merge_imputed(adata_out=None, **kwargs):
+    if kwargs == {}:
+        # assume files
+        kwargs['ctrl'] = '/home/ngr4/project/scnd/data/processed/hum_wtimp_210920.h5ad'
+        kwargs['sca1'] = '/home/ngr4/project/scnd/data/processed/hum_sca1imp_210920.h5ad'
+    adatas = {}
+    for i, (k, v) in enumerate(kwargs.items()):
+        adatas[k] = sc.read(v)
+    # concatenate, assume at least 2
+    batch_names = list(adatas.keys())
+    adata = adatas[batch_names[0]].concatenate(*[adatas[k] for k in batch_names[1:]],
+                                       batch_key='source',
+                                       batch_categories=batch_names)
+    if adata_out is not None:
+        save_adata(adata, adata_out)
+    return adata
+
+def load_human_redo(adata_file='/home/ngr4/project/scnd/data/processed/hum_210920.h5ad', imputed_adata='/home/ngr4/project/scnd/data/processed/hum_imputed_210920.h5ad', imputed=False):
+    if imputed:
+        # could do the merge here
+        adata = sc.read(imputed_adata)
+    else:
+        adata = sc.read(adata_file)
+    return adata
+    

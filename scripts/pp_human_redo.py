@@ -178,7 +178,7 @@ def batch_correction(adata, adata_out=None, batch_key='Sample', knn=100,
     print('\n  BB-kNN batch crct + UMAP + PHATE in {:.1f}-min'.format((time.time() - start)/60))
     
     if plot2_out or plot2_out is None or type(plot2_out)==str:
-        fig, ax = plt.subplots(1, 3, figsize(16, 4))
+        fig, ax = plt.subplots(1, 3, figsize=(16, 4))
 
         sns.scatterplot(x=adata.obsm['X_pca'][:, 0],
                         y=adata.obsm['X_pca'][:, 1],
@@ -214,16 +214,17 @@ def batch_correction(adata, adata_out=None, batch_key='Sample', knn=100,
 
     return adata
 
-def magic_impute(adata, adata_out, batch_key='Sample', t=1):
+def magic_impute(adata, adata_out=None, batch_key='Sample', t=1):
     tic = time.time()
-    def graph_pp(AnnData, bbknn=True, k=30, n_pcs=100, batch_key=batch_key):
+    def graph_pp(AnnData, use_bbknn=True, k=30, n_pcs=100, batch_key=batch_key):
         sc.tl.pca(AnnData, n_comps=n_pcs)
-        if bbknn:
+        if use_bbknn:
             bbknn.bbknn(AnnData,
-                                 n_pcs=n_pcs,
-                                 neighbors_within_batch=k // len(adata.obs[batch_key].unique()))
+                        n_pcs=n_pcs,
+                        neighbors_within_batch=k // len(adata.obs[batch_key].unique()))
         else:
             sc.pp.neighbors(AnnData, n_pcs=n_pcs, n_neighbors=k)
+        return AnnData
     adata = graph_pp(adata)
     G = gt.Graph(data=adata.obsp['connectivities']+sparse.diags([1]*adata.shape[0],format='csr'),
                  precomputed='adjacency',
@@ -233,6 +234,8 @@ def magic_impute(adata, adata_out, batch_key='Sample', t=1):
     magic_op=magic.MAGIC(t=t).fit(X=adata.X, graph=G)
     adata.layers['imputed']=magic_op.transform(adata.X, genes='all_genes')
     print('\n... imputation in {:.1f}-min for {}-cells x {}-genes'.format((time.time() - tic)/60, *adata.shape))
+    if adata_out is not None:
+        save_adata(adata, adata_out)
     return adata
 
 if __name__ == '__main__':
