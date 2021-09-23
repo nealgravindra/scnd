@@ -48,13 +48,11 @@ def cellranger2adata(data_folders, sample_str_pattern='(.*)_HNT', adata_out=None
         animal_id = os.path.split(re.findall(sample_str_pattern, folder)[0])[1]
         print('... storing %s into dict (%d/%d)' % (animal_id, i+1, len(data_folders)))
         adatas[animal_id] = sc.read_10x_mtx(folder)
-        running_cellcount+=adatas[animal_id].shape[0]
+        running_cellcount += adatas[animal_id].shape[0]
         print('...     read {} cells; total: {} in {:.2f}-s'.format(adatas[animal_id].shape[0],running_cellcount,time.time()-start))
     batch_names = list(adatas.keys())
     print('\n... concatenating of {}-samples'.format(len(data_folders)))
-    adata = adatas[batch_names[0]].concatenate(adatas[batch_names[1]],adatas[batch_names[2]],
-                                               adatas[batch_names[3]],adatas[batch_names[4]],
-                                               adatas[batch_names[5]],
+    adata = adatas[batch_names[0]].concatenate(*[adatas[k] for k in batch_names[1:]],
                                                batch_categories = batch_names)
     print('Raw load in {:.2f}-min'.format((time.time() - start)/60))
 
