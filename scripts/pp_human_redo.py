@@ -81,8 +81,12 @@ def pp(adata, doublets=True, adata_out=None):
         save_adata(adata, adata_out)
     return adata
 
-def batch_correction(adata, adata_out=None, batch_key='Sample', knn=100, 
-                     plot1_out=None, plot2_out=None):
+def batch_correction(adata, adata_out=None,
+                     batch_key='Sample', 
+                     knn=30, n_pcs=100, 
+                     plot1_out=None, plot2_out=None, 
+                     plot3_out=None, plot4_out=None,
+                     plot5_out=None):
     '''
     Arguments:
       plot*_out (bool/str/None): if False, don't make plots. Replace None with str to save.
@@ -91,8 +95,8 @@ def batch_correction(adata, adata_out=None, batch_key='Sample', knn=100,
     if plot1_out or plot1_out is None or type(plot1_out)==str:
         # batch effect plot
         tdata = adata
-        sc.tl.pca(tdata,n_comps=100)
-        sc.pp.neighbors(tdata,n_neighbors=30,n_pcs=100)
+        sc.tl.pca(tdata,n_comps=n_pcs)
+        sc.pp.neighbors(tdata, n_neighbors=knn, n_pcs=n_pcs)
         sc.tl.umap(tdata)
         G = gt.Graph(data=tdata.uns['neighbors']['connectivities']+sparse.diags([1]*tdata.shape[0],format='csr'),
                  precomputed='adjacency',
@@ -141,17 +145,16 @@ def batch_correction(adata, adata_out=None, batch_key='Sample', knn=100,
         fig.tight_layout()
 
         if type(plot1_out)==str:
-            fig.savefig(plot1_out, dpi=600, bbox_inches='tight')
+            fig.savefig(plot1_out, dpi=300, bbox_inches='tight')
         del tdata
     
     start = time.time()
     print('Starting embeddings and batch effect correcftion...')
-    sc.tl.pca(adata, n_comps=100)
+    sc.tl.pca(adata, n_comps=n_pcs)
     bbknn.bbknn(adata, 
-                         n_pcs=100, 
-                         batch_key=batch_key,
-                         neighbors_within_batch=knn//len(adata.obs[batch_key].unique()),
-                        ) 
+                n_pcs=n_pcs, 
+                batch_key=batch_key,
+                neighbors_within_batch=knn) # knn//len(adata.obs[batch_key].unique()
     sc.tl.leiden(adata, resolution=3.0)
     sc.tl.umap(adata)
 
@@ -208,7 +211,62 @@ def batch_correction(adata, adata_out=None, batch_key='Sample', knn=100,
         fig.tight_layout()
 
         if type(plot2_out)==str:
-            fig.savefig(plot2_out, bbox_inches='tight', dpi=600)
+            fig.savefig(plot2_out, bbox_inches='tight', dpi=300)
+           
+    ####
+    # input markers
+    ####
+    markersoi = [
+    'GABRA6', 'SLC17A7', 'SLC17A6', 'EOMES', 
+    'ATP2A3', 'CALB1', 'CA8', 'PPP1R17', 'SLC1A6', 
+    'GAD1', 'GAD2', 'NTN1', 'MEGF10', 'ALDH1L1', 'AQP4',
+    'GDF10', 'HOPX', 'OLIG1', 'OLIG2', 'PDGFRA',
+    'HAPLN2', 'MAG', 'MOG', 'OPALIN', 'C1QB', 
+    'CX3CR1', 'DOCK2', 'P2RY12', 'FLT1', 'RGS5', 'DCN', 'LUM', 'KDR']
+    ####
+    
+    if type(plot3_out) == str:
+        sc.pl.StackedViolin(adata, 
+                    markersoi,
+                    groupby='leiden', 
+                    use_raw=False, 
+                    layer='imputed').savefig(
+            plot3_out, 
+            bbox_inches='tight', 
+            dpi=300)
+        
+    if type(plot4_out) == str:
+        sc.pl.DotPlot(adata, 
+                    markersoi,
+                    groupby='leiden', 
+                    use_raw=True).savefig(
+            plot4_out,
+            bbox_inches='tight', 
+            dpi=300)
+        
+    if type(plot5_out) == str:
+        fig, ax = plt.subplots(1, 1, figsize=(10, 8))
+
+        sns.scatterplot(x=adata.obsm['X_umap'][:, 0],
+                        y=adata.obsm['X_umap'][:, 1],
+                        hue=adata.obs['leiden'],
+                        linewidth=0,
+                        alpha=0.8,
+                        s=1,
+                        rasterized=True,
+                        ax=ax)
+
+        ax.set_xticks([])
+        ax.set_yticks([])
+        ax.set_xlabel('UMAP1')
+        ax.set_ylabel('UMAP2')
+
+        for l in adata.obs['leiden'].unique():
+            x, y = np.mean(adata[adata.obs['leiden']==l, :].obsm['X_umap'], 0)
+            ax.text(x, y, l)
+
+        fig.savefig(plot5_out, bbox_inches='tight', dpi=300)
+
 
     return adata
 
