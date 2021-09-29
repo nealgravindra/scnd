@@ -273,8 +273,8 @@ def save_adata(adata, out_file, verbose=True):
 def merge_imputed(adata_out=None, **kwargs):
     if kwargs == {}:
         # assume files
-        kwargs['ctrl'] = '/home/ngr4/project/scnd/data/processed/hum_wtimp_210920.h5ad'
-        kwargs['sca1'] = '/home/ngr4/project/scnd/data/processed/hum_sca1imp_210920.h5ad'
+        kwargs['ctrl'] = '/home/ngr4/project/scnd/data/processed/hum_wtimp_210928.h5ad'
+        kwargs['sca1'] = '/home/ngr4/project/scnd/data/processed/hum_sca1imp_210928.h5ad'
     adatas = {}
     for i, (k, v) in enumerate(kwargs.items()):
         adatas[k] = sc.read(v)
@@ -287,7 +287,7 @@ def merge_imputed(adata_out=None, **kwargs):
         save_adata(adata, adata_out)
     return adata
 
-def load_human_redo(adata_file='/home/ngr4/project/scnd/data/processed/hum_210920.h5ad', imputed_adata='/home/ngr4/project/scnd/data/processed/hum_imputed_210920.h5ad', imputed=False):
+def load_human_redo(adata_file='/home/ngr4/project/scnd/data/processed/hum_210928.h5ad', imputed_adata='/home/ngr4/project/scnd/data/processed/hum_imputed_210928.h5ad', imputed=False):
     if imputed:
         # could do the merge here
         adata = sc.read(imputed_adata)

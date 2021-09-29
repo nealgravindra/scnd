@@ -49,7 +49,7 @@ def init_load(pdfp,
     adata.obs['genotype'] = 'None'
     adata.obs.loc[[True if 'SCA1' in i else False for i in adata.obs['Sample']], 'genotype'] = 'SCA1'
     adata.obs.loc[[True if 'CTRL' in i else False for i in adata.obs['Sample']], 'genotype'] = 'CTRL'
-    adata = pp(adata, adata_out=adata_out)
+    adata = scndpp.pp(adata, adata_out=adata_out)
     return adata
 
 def load_pp_hum_adata(
@@ -89,7 +89,7 @@ if __name__ == '__main__':
             ####
             plot1 = os.path.join(pfp, 'hrbc_pre_k{}_npc{}.pdf'.format(k, n_pcs))
             plot2 = os.path.join(pfp, 'hrbc_post_k{}_npc{}.pdf'.format(k, n_pcs))
-            plot3 = os.path.join(pfp, 'hrbc_violin_k{}_npc{}.pdf'.format(k, n_pcs))
+            # plot3 = os.path.join(pfp, 'hrbc_violin_k{}_npc{}.pdf'.format(k, n_pcs))
             plot4 = os.path.join(pfp, 'hrbc_dot_k{}_npc{}.pdf'.format(k, n_pcs))
             plot5 = os.path.join(pfp, 'hrbc_umapcid_k{}_npc{}.pdf'.format(k, n_pcs))
             ####
@@ -98,7 +98,7 @@ if __name__ == '__main__':
                                             knn=k, n_pcs=n_pcs,
                                             plot1_out=plot1,
                                             plot2_out=plot2,
-                                            plot3_out=plot3,
+                                            # plot3_out=plot3,
                                             plot4_out=plot4,
                                             plot5_out=plot5,)
             

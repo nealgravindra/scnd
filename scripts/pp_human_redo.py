@@ -83,7 +83,7 @@ def pp(adata, doublets=True, adata_out=None):
 
 def batch_correction(adata, adata_out=None,
                      batch_key='Sample', 
-                     knn=30, n_pcs=100, 
+                     knn=3, n_pcs=20, 
                      plot1_out=None, plot2_out=None, 
                      plot3_out=None, plot4_out=None,
                      plot5_out=None):
@@ -272,12 +272,12 @@ def batch_correction(adata, adata_out=None,
 
 def magic_impute(adata, adata_out=None, batch_key='Sample', t=1):
     tic = time.time()
-    def graph_pp(AnnData, use_bbknn=True, k=30, n_pcs=100, batch_key=batch_key):
+    def graph_pp(AnnData, use_bbknn=True, k=3, n_pcs=20, batch_key=batch_key):
         sc.tl.pca(AnnData, n_comps=n_pcs)
         if use_bbknn:
             bbknn.bbknn(AnnData,
                         n_pcs=n_pcs,
-                        neighbors_within_batch=k // len(adata.obs[batch_key].unique()))
+                        neighbors_within_batch=k) # k // len(adata.obs[batch_key].unique()))
         else:
             sc.pp.neighbors(AnnData, n_pcs=n_pcs, n_neighbors=k)
         return AnnData
@@ -321,7 +321,7 @@ if __name__ == '__main__':
         '3-Jan_HNT', '409_HNT',
         ]
     data_folders = [os.path.join(i, 'outs/filtered_feature_bc_matrix/') for i in data_folders]
-    adata_out = '/home/ngr4/project/scnd/data/processed/hum_210920.h5ad'
+    adata_out = '/home/ngr4/project/scnd/data/processed/hum_210928.h5ad'
     ####
 
     sc.settings.figdir = pfp
@@ -366,8 +366,8 @@ if __name__ == '__main__':
     ####
     # impute adata names
     ###
-    wt_out = '/home/ngr4/project/scnd/data/processed/hum_wtimp_210920.h5ad'
-    mut_out = '/home/ngr4/project/scnd/data/processed/hum_sca1imp_210920.h5ad'
+    wt_out = '/home/ngr4/project/scnd/data/processed/hum_wtimp_210928.h5ad'
+    mut_out = '/home/ngr4/project/scnd/data/processed/hum_sca1imp_210928.h5ad'
     ####
 
     wt = magic_impute(adata[adata.obs['genotype']=='CTRL', :], adata_out=wt_out)
