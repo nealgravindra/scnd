@@ -294,4 +294,7 @@ def load_human_redo(adata_file='/home/ngr4/project/scnd/data/processed/hum_21092
     else:
         adata = sc.read(adata_file)
     return adata
+
+def load_annotated_hum_redo(adata_file='/home/ngr4/project/scnd/data/processed/hum_imp_211006.h5ad'):
+    return sc.read(adata_file)
     
