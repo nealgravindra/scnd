@@ -297,4 +297,29 @@ def load_human_redo(adata_file='/home/ngr4/project/scnd/data/processed/hum_21092
 
 def load_annotated_hum_redo(adata_file='/home/ngr4/project/scnd/data/processed/hum_imp_211006.h5ad'):
     return sc.read(adata_file)
-    
+
+def merge_adata_loom(adata, loom_fp='/home/ngr4/project/scnd/data/human/rnavel/redo/', verbose=True):
+
+        loom_files = glob.glob(os.path.join(loom_fp,'*/*.loom'))
+        sample_names = [os.path.split(os.path.split(f)[0])[1] for f in loom_files]
+        if verbose:
+            print('Loading looms...')
+            for (name, f) in zip(sample_names, loom_files):
+                print('  for {} @{}'.format(name, f))
+        adata_looms = {}
+        for i, f in enumerate(loom_files):
+            print('  ... loading {} @{}'.format(sample_names[i], f))
+            start = time.time()
+            if i == 0:
+                adata_loom = scv.read_loom(f, sparse=True, cleanup=True)
+                adata_loom.var_names_make_unique()
+            else:
+                adata_looms[sample_names[i]] = scv.read_loom(f, sparse=True, cleanup=True)
+                adata_looms[sample_names[i]].var_names_make_unique()
+        try:
+            adata_loom = adata_loom.concatenate(*adata_looms.values(), batch_categories=sample_names)
+        except ValueError:
+            adata_loom = adata_loom.concatenate(*adata_looms.values(), batch_categories=sample_names)
+        if verbose:
+            print('looms loaded into sc.AnnData in {:.1f}-min'.format((time.time()-start)/60))
+        return scv.utils.merge(adata, adata_loom)
