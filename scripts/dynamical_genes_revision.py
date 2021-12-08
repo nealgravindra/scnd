@@ -95,9 +95,9 @@ for ii, ctype in enumerate(np.sort(wtt.obs[c].unique())):
     if recalculate:
         if ctype=='Granule cell': 
             # sample with replacement, ~260k granule cells, cpu can handle maybe 75k in each group?
-            nsample_idx = wtt.obs.loc[(wtt.obs[c]==ctype), :].sample(20000).index.to_list()
+            nsample_idx = wtt.obs.loc[(wtt.obs[c]==ctype), :].sample(5000).index.to_list()
             wt = wtt[(wtt.obs[c]==ctype) & (wtt.obs.index.isin(nsample_idx))].copy()
-            nsample_idx = mutt.obs.loc[(mutt.obs[c]==ctype), :].sample(20000).index.to_list()
+            nsample_idx = mutt.obs.loc[(mutt.obs[c]==ctype), :].sample(5000).index.to_list()
             mut = mutt[(mutt.obs[c]==ctype) & (mutt.obs.index.isin(nsample_idx))].copy()
         else:
             wt = wtt[(wtt.obs[c]==ctype), :].copy()
@@ -381,11 +381,11 @@ for ii, ctype in enumerate(np.sort(wtt.obs[c].unique())):
         x = pd.DataFrame(wt[:, topgenes].layers['imputed'], 
                  columns=topgenes,
                  index=wt.obs.index.to_list())
-        x['ctype'] = wt.obs['ctype'].to_list()
+        x['ctype'] = wt.obs[c].to_list()
         y = pd.DataFrame(mut[:, topgenes].layers['imputed'], 
                          columns=topgenes,
                          index=mut.obs.index.to_list())
-        y['ctype'] = mut.obs['ctype'].to_list()
+        y['ctype'] = mut.obs[c].to_list()
         x = x.append(y)
         del y
         x = x.loc[x['ctype']==ctype, :]
