@@ -323,3 +323,21 @@ def merge_adata_loom(adata, loom_fp='/home/ngr4/project/scnd/data/human/rnavel/r
         if verbose:
             print('looms loaded into sc.AnnData in {:.1f}-min'.format((time.time()-start)/60))
         return scv.utils.merge(adata, adata_loom)
+    
+def load_mouse_imputed_revision(merge=False, **kwargs):
+    '''Replace sc.AnnData.X slot with scAnnData.layers['imputed']
+    '''
+    # load imputed data
+    wt = sc.read('/home/ngr4/project/scnd/data/processed/mouse_wt_imputed.h5ad')
+    if 'add_md' in kwargs:
+        wt.obs = wt.obs.merge(kwargs['add_md'], left_index=True, right_index=True)
+    mut = sc.read('/home/ngr4/project/scnd/data/processed/mouse_sca1_imputed.h5ad')
+    if 'add_md' in kwargs:
+        mut.obs = mut.obs.merge(kwargs['add_md'], left_index=True, right_index=True)
+    if merge:
+        adata = wt
+        del wt
+        adata = wt.concatenate(mut, batch_key='imp_source', index_unique=None)
+        return adata
+    else:
+        return wt, mut
