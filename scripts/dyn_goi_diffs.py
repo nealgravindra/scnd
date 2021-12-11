@@ -39,7 +39,11 @@ sc.settings.verbosity=2
 sc._settings.ScanpyConfig.n_jobs=-1
 sns.set_style("ticks")
 
-def meld_pseudotime(AnnData, goi):
+def meld_pseudotime(AnnData, goi, one_df=False):
+    if AnnData.shape[0] > 5000:
+        AnnData = AnnData[AnnData.obs.sample(5000, replace=True).index, :]
+        AnnData.obs_names_make_unique() 
+    AnnData = AnnData.copy() # to allow subsetting?
     sc.pp.pca(AnnData)
     sc.pp.neighbors(AnnData, n_pcs=50)
 
@@ -59,7 +63,16 @@ def meld_pseudotime(AnnData, goi):
     # strata
     X = pd.DataFrame(AnnData[:, goi].layers['imputed'], columns=goi, index=AnnData.obs.index.to_list())
     y = AnnData.obs['ees_t'].to_numpy()
-    return X, y
+    
+    if one_df:
+        # collate
+        X['genotype'] = AnnData.obs['genotype'].to_list()
+        X['timepoint'] = AnnData.obs['timepoint'].to_list()
+        X['Pseudotime'] = y
+        X['ctype'] = AnnData.obs['ctype_ubcupdate'].to_list()
+        return X
+    else:
+        return X, y
 
 def dyn_gene_diff(WT, MUT, goi='all', gkey='ctype_ubcupdate', gcname=None,
                   pfp='/home/ngr4/project/scnd/results/dyngoi/',
